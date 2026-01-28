@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Key, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react'
+import { Key, CheckCircle, AlertCircle, ArrowRight, Gauge } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -10,7 +10,7 @@ import { validateApiKey, createSession } from '../lib/api'
 
 export default function ConfigPage() {
   const navigate = useNavigate()
-  const { apiKey, setApiKey, setSessionId, setCurrentStep } = useAppStore()
+  const { apiKey, setApiKey, setSessionId, setCurrentStep, rateLimitEnabled, setRateLimitEnabled } = useAppStore()
   
   const [key, setKey] = useState(apiKey || '')
   const [loading, setLoading] = useState(false)
@@ -127,6 +127,43 @@ export default function ConfigPage() {
               <span className="text-sm">{error}</span>
             </div>
           )}
+
+          {/* Rate Limiting Toggle */}
+          <div className="border border-gray-200 rounded-lg p-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Gauge className="h-5 w-5 text-gray-500" />
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900">Rate Limiting</h3>
+                  <p className="text-xs text-gray-500">
+                    Add delays between API calls to avoid hitting limits
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={rateLimitEnabled}
+                onClick={() => setRateLimitEnabled(!rateLimitEnabled)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                  rateLimitEnabled ? 'bg-primary-600' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    rateLimitEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              {rateLimitEnabled 
+                ? '✅ Enabled: Safer for free tier, slower generation'
+                : '⚡ Disabled: Faster generation, may hit rate limits'
+              }
+            </p>
+          </div>
         </CardBody>
 
         <CardFooter className="flex justify-between">

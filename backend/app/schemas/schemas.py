@@ -118,6 +118,7 @@ class GenerateRequest(BaseModel):
     session_id: str
     cluster_ids: Optional[List[str]] = None  # None means generate all
     prompt_options: Optional[PromptOptions] = None  # None means default balanced English
+    rate_limit_enabled: bool = True  # Whether to add delays between API calls
 
 
 class GenerateResponse(BaseModel):

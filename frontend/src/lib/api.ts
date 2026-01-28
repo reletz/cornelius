@@ -107,12 +107,14 @@ export interface PromptOptionsPayload {
 export const generateNotes = async (
   sessionId: string, 
   clusterIds?: string[],
-  promptOptions?: PromptOptionsPayload
+  promptOptions?: PromptOptionsPayload,
+  rateLimitEnabled?: boolean
 ) => {
   const response = await api.post('/generate/', {
     session_id: sessionId,
     cluster_ids: clusterIds,
     prompt_options: promptOptions,
+    rate_limit_enabled: rateLimitEnabled,
   })
   return response.data
 }

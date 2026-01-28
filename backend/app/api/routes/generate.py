@@ -34,13 +34,17 @@ async def generate_notes_task(
     cluster_ids: list,
     api_key: str,
     session_id: str,
-    prompt_options: dict = None
+    prompt_options: dict = None,
+    rate_limit_enabled: bool = True
 ):
     """Background task for note generation."""
     from sqlalchemy import delete
     
     status = generation_tasks[task_id]
     status.status = "processing"
+    
+    # Rate limit delay (in seconds) between API calls
+    RATE_LIMIT_DELAY = 3.0  # 3 seconds between calls when enabled
     
     async with async_session_maker() as db:
         try:
@@ -105,6 +109,10 @@ async def generate_notes_task(
                         
                         status.completed_clusters.append(cluster_id)
                         
+                        # Rate limiting delay between successful generations
+                        if rate_limit_enabled and len(status.completed_clusters) < len(cluster_ids):
+                            await asyncio.sleep(RATE_LIMIT_DELAY)
+                        
                     except Exception as e:
                         status.failed_clusters.append(cluster_id)
                         
@@ -116,6 +124,10 @@ async def generate_notes_task(
                         )
                         db.add(note)
                         await db.commit()
+                        
+                        # Still apply rate limit after failure
+                        if rate_limit_enabled:
+                            await asyncio.sleep(RATE_LIMIT_DELAY)
                     
                     # Update progress
                     total = len(cluster_ids)
@@ -187,7 +199,8 @@ async def generate_notes(
         cluster_ids,
         api_key,
         request.session_id,
-        prompt_opts_dict
+        prompt_opts_dict,
+        request.rate_limit_enabled
     )
     
     return GenerateResponse(

@@ -43,6 +43,10 @@ interface AppState {
   apiKey: string | null
   setApiKey: (key: string | null) => void
   
+  // Rate limiting toggle
+  rateLimitEnabled: boolean
+  setRateLimitEnabled: (enabled: boolean) => void
+  
   // Current session
   sessionId: string | null
   setSessionId: (id: string | null) => void
@@ -80,6 +84,7 @@ interface AppState {
 
 const initialState = {
   apiKey: null,
+  rateLimitEnabled: true,
   sessionId: null,
   documents: [],
   clusters: [],
@@ -100,6 +105,8 @@ export const useAppStore = create<AppState>()(
       ...initialState,
       
       setApiKey: (key) => set({ apiKey: key }),
+      
+      setRateLimitEnabled: (enabled) => set({ rateLimitEnabled: enabled }),
       
       setSessionId: (id) => set({ sessionId: id }),
       
@@ -140,16 +147,17 @@ export const useAppStore = create<AppState>()(
         notes: [],
         generationTaskId: null,
         currentStep: 0,
-        // Keep promptOptions for user preference
+        // Keep promptOptions and rateLimitEnabled for user preference
       }),
     }),
     {
       name: 'cornell-notes-storage',
       partialize: (state) => ({ 
         apiKey: state.apiKey,
+        rateLimitEnabled: state.rateLimitEnabled,
         sessionId: state.sessionId,
         currentStep: state.currentStep,
-        promptOptions: state.promptOptions, // Persist prompt preferences
+        promptOptions: state.promptOptions,
       }),
     }
   )

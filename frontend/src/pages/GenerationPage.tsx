@@ -32,7 +32,8 @@ export default function GenerationPage() {
     setGenerationTaskId,
     setNotes,
     setCurrentStep,
-    promptOptions
+    promptOptions,
+    rateLimitEnabled
   } = useAppStore()
   
   const [status, setStatus] = useState<{
@@ -121,7 +122,7 @@ export default function GenerationPage() {
         custom_prompt: promptOptions.customPrompt || undefined,
       }
       
-      const result = await generateNotes(sessionId, undefined, promptPayload)
+      const result = await generateNotes(sessionId, undefined, promptPayload, rateLimitEnabled)
       setGenerationTaskId(result.task_id)
       setPolling(true)
       toast.success('Generation started!')

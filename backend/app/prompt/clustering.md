@@ -1,101 +1,86 @@
-# Task: Identify Subtopics for Cornell Notes Generation
+# Task: Identify UNIQUE Subtopics for Cornell Notes Generation
 
-You are analyzing academic materials to identify coherent subtopics that will each become a standalone Cornell note.
+You are analyzing academic materials to identify DISTINCT, NON-OVERLAPPING subtopics that will each become a standalone Cornell note.
 
-## Input Materials
+## CRITICAL CONSTRAINT: TOPIC UNIQUENESS
 
-[PASTE ALL EXTRACTED TEXT HERE WITH METADATA]
+**EACH CLUSTER MUST BE COMPLETELY UNIQUE:**
+- NO content overlap between clusters
+- NO repeated concepts across different clusters  
+- Each piece of source content should appear in EXACTLY ONE cluster
+- If a concept appears in multiple source documents, consolidate it into ONE cluster only
 
-Document 1: lecture1.pptx (45 slides)
----
-Slide 1: Introduction to Graph Traversal...
-Slide 2: Depth-First Search Overview...
-[full text]
----
+**VIOLATION EXAMPLES TO AVOID:**
+- ❌ Cluster 1: "DFS Basics" + Cluster 2: "DFS Introduction" (same topic, different names)
+- ❌ Cluster 1: "Graph Traversal" including DFS + Cluster 2: "DFS Algorithms" (overlapping)
+- ❌ Cluster 1: "Data Structures Overview" + Cluster 3: "Trees and Graphs" (trees/graphs already covered)
 
-Document 2: lecture2.pptx (38 slides)
----
-Slide 1: Advanced DFS Techniques...
-[full text]
----
+**CORRECT EXAMPLES:**
+- ✅ Cluster 1: "DFS: Depth-First Search" + Cluster 2: "BFS: Breadth-First Search" (distinct algorithms)
+- ✅ Cluster 1: "Graph Representation" + Cluster 2: "Graph Traversal Algorithms" (non-overlapping)
 
-Document 3: lecture3.pptx (30 slides)
----
-[full text]
----
+## Input Format
+
+Documents will be provided with source markers like:
+=== SOURCE: filename.pptx ===
+[content]
 
 ## Requirements
 
-1. **Identify 3-7 Subtopics**
-   - Each subtopic should be substantial enough for a comprehensive note (minimum 1500 words of content)
-   - Group related concepts together logically
-   - Avoid overly granular splits (don't create separate topics for closely related concepts)
-   - Ensure topics flow in a logical learning sequence
+1. **Identify 3-7 DISTINCT Subtopics**
+   - Each subtopic MUST cover a unique concept NOT covered elsewhere
+   - Before finalizing, mentally check: "Does this topic overlap with any other cluster?"
+   - Group ALL related content for a concept into ONE cluster (don't split)
+   - Minimum 1500 words of content per cluster
 
-2. **For Each Subtopic, Specify:**
-   - Clear, descriptive title (should indicate what student will learn)
-   - Which documents and slide/page ranges contain content for this subtopic
-   - Brief rationale (1 sentence) explaining why this grouping makes sense
+2. **Uniqueness Verification Checklist (Do This!):**
+   - [ ] Each cluster title represents a distinct concept
+   - [ ] No keyword/concept appears in multiple cluster titles
+   - [ ] Source slides are NOT duplicated across clusters
+   - [ ] If removing one cluster, others still make sense independently
 
-3. **Source Mapping Precision**
-   - Be specific about slide/page ranges
-   - If content is non-contiguous, list multiple ranges
-   - Example: "lecture1.pptx (slides 5-12, 28-35)" not just "lecture1.pptx"
+3. **For Each Subtopic, Specify:**
+   - Clear, specific title (not vague like "Introduction" or "Overview")
+   - Which documents and slide/page ranges contain content
+   - Keywords that are UNIQUE to this cluster
+   - Brief rationale explaining the unique scope
 
-4. **Handle Content Overlap**
-   - If multiple documents cover the same concept, group them under one subtopic
-   - Example: If all 3 lectures introduce DFS basics, put them all in "DFS Fundamentals" subtopic
+4. **Source Mapping Rules:**
+   - Each source range should appear in ONLY ONE cluster
+   - If content spans multiple concepts, assign to the PRIMARY concept
+   - Be specific: "lecture1.pptx (slides 5-12)" not just "lecture1.pptx"
 
 ## Output Format
 
-Respond ONLY with valid JSON, no markdown code blocks, no preamble:
+Respond ONLY with valid JSON:
 
+```json
 {
   "clusters": [
     {
       "id": "1",
-      "title": "Descriptive subtopic title that indicates learning objective",
-      "sources": [
-        {
-          "document": "lecture1.pptx",
-          "slides": "1-15"
-        },
-        {
-          "document": "lecture2.pptx",
-          "slides": "3-8"
-        }
+      "title": "Specific, Unique Topic Title",
+      "keywords": ["keyword1", "keyword2", "keyword3"],
+      "source_mapping": [
+        {"source": "lecture1.pptx", "slides": [1, 2, 3, 4, 5]},
+        {"source": "lecture2.pptx", "slides": [10, 11, 12]}
       ],
-      "rationale": "One sentence explaining why these sources belong together",
-      "estimated_words": 2000
-    },
-    {
-      "id": "2",
-      "title": "Another subtopic",
-      "sources": [
-        {
-          "document": "lecture2.pptx",
-          "slides": "20-35"
-        },
-        {
-          "document": "lecture3.pptx",
-          "slides": "5-18"
-        }
-      ],
-      "rationale": "Explanation for this grouping",
-      "estimated_words": 1800
+      "summary": "One sentence summary of what this cluster covers",
+      "estimated_word_count": 2000,
+      "unique_concepts": ["concept only in this cluster", "another unique concept"]
     }
   ],
   "total_clusters": 5,
-  "clustering_approach": "Brief explanation of overall strategy used"
+  "uniqueness_verification": "Brief statement confirming no overlap between clusters"
 }
+```
 
-## Quality Guidelines
+## Quality Checklist Before Output
 
-- GOOD: "DFS Implementation: Recursive vs Iterative Approaches"
-- POOR: "DFS" (too vague)
-- POOR: "Slide 5-10 Content" (not descriptive)
-
-- GOOD: Grouping "DFS basics" from lecture 1, "DFS examples" from lecture 2, "DFS practice" from lecture 3 into one "DFS Fundamentals" topic
-- POOR: Splitting "DFS Introduction" and "DFS Definition" into separate topics (too granular)
+Before outputting, verify:
+1. ✅ Each cluster has a DISTINCT title with no conceptual overlap
+2. ✅ No source slides appear in multiple clusters
+3. ✅ Keywords are unique to each cluster (no shared keywords)
+4. ✅ Removing any cluster doesn't affect others' completeness
 
 Begin analysis now.

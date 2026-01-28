@@ -2,6 +2,7 @@
 Note generation service - Cornell notes using OpenRouter LLM.
 """
 import logging
+import httpx
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from openai import AsyncOpenAI
@@ -13,6 +14,9 @@ logger = logging.getLogger(__name__)
 # OpenRouter configuration
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 NOTE_GENERATION_MODEL = "tngtech/deepseek-r1t2-chimera:free"
+
+# HTTP client with timeout
+HTTP_TIMEOUT = httpx.Timeout(180.0, connect=30.0)  # 3 min total, 30s connect
 
 # Prompt paths
 PROMPT_DIR = Path(__file__).parent.parent / "prompt"
@@ -74,10 +78,11 @@ class NoteGenerationService:
         Returns:
             Generated markdown content
         """
-        # Configure OpenRouter client
+        # Configure OpenRouter client with timeout
         client = AsyncOpenAI(
             base_url=OPENROUTER_BASE_URL,
             api_key=api_key,
+            timeout=HTTP_TIMEOUT,
         )
         
         # Build uniqueness context
@@ -136,14 +141,25 @@ class NoteGenerationService:
 """
         
         try:
-            response = await client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.7,
-                max_tokens=8192,
+            import asyncio
+            
+            # Add timeout for API call (3 minutes max)
+            response = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.7,
+                    max_tokens=8192,
+                ),
+                timeout=180.0  # 3 minutes timeout
             )
             
             raw_content = response.choices[0].message.content
+            
+            # Check if response is empty or too short
+            if not raw_content or len(raw_content) < 100:
+                raise ValueError(f"Response too short or empty: {len(raw_content) if raw_content else 0} chars")
+            
             cleaned = self._clean_response(raw_content)
             
             # Only apply formatter for default prompts
@@ -181,26 +197,48 @@ class NoteGenerationService:
             return ""
         
         lines = [
-            "## IMPORTANT: Topic Uniqueness Requirement",
+            "---",
             "",
-            "This note is part of a set. Other notes in this set cover the following topics.",
-            "**DO NOT repeat or overlap with these topics. Focus ONLY on your assigned topic.**",
+            "## ⚠️ CRITICAL: CONTENT EXCLUSION LIST ⚠️",
+            "",
+            "The following topics are covered by OTHER notes in this set.",
+            "**YOU MUST NOT WRITE ABOUT THESE TOPICS. SKIP THEM ENTIRELY.**",
+            "",
+            "If you find yourself about to explain any concept from the list below, STOP and move on.",
             ""
         ]
+        
+        # Collect all forbidden keywords
+        all_forbidden_keywords = []
+        all_forbidden_concepts = []
         
         for i, topic in enumerate(other_topics, 1):
             title = topic.get("title", "Unknown")
             keywords = topic.get("keywords", [])
             summary = topic.get("summary", "")
+            unique_concepts = topic.get("unique_concepts", [])
             
-            lines.append(f"### Other Note {i}: {title}")
+            lines.append(f"### ❌ FORBIDDEN Topic {i}: {title}")
             if keywords:
-                lines.append(f"- Keywords: {', '.join(keywords[:5])}")
+                all_forbidden_keywords.extend(keywords)
+                lines.append(f"   - Keywords to AVOID: {', '.join(keywords[:7])}")
+            if unique_concepts:
+                all_forbidden_concepts.extend(unique_concepts)
+                lines.append(f"   - Concepts to AVOID: {', '.join(unique_concepts[:5])}")
             if summary:
-                lines.append(f"- Covers: {summary[:200]}")
+                lines.append(f"   - Already covered: {summary[:150]}")
             lines.append("")
         
-        lines.append("**Your note must NOT include content that belongs to the above topics.**")
+        # Summary of all forbidden terms
+        if all_forbidden_keywords:
+            lines.append("### 🚫 COMPLETE LIST OF FORBIDDEN KEYWORDS:")
+            lines.append(f"Do NOT define, explain, or elaborate on: {', '.join(set(all_forbidden_keywords))}")
+            lines.append("")
+        
+        lines.append("---")
+        lines.append("")
+        lines.append("**INSTRUCTION: Focus ONLY on your assigned topic. If source material mentions")
+        lines.append("forbidden concepts, acknowledge them briefly but DO NOT explain them.**")
         lines.append("")
         
         return "\n".join(lines)

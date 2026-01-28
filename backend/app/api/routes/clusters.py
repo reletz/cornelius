@@ -69,7 +69,8 @@ async def analyze_and_cluster(
                 "keywords": cluster_data.get("keywords", []),
                 "source_mapping": cluster_data.get("source_mapping", []),
                 "summary": cluster_data.get("summary", ""),
-                "estimated_word_count": cluster_data.get("estimated_word_count", 0)
+                "estimated_word_count": cluster_data.get("estimated_word_count", 0),
+                "unique_concepts": cluster_data.get("unique_concepts", [])
             },
             order_index=idx
         )

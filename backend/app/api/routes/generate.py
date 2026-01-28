@@ -72,7 +72,8 @@ async def generate_notes_task(
                         context.append({
                             "title": c.title,
                             "keywords": c.sources_json.get("keywords", []),
-                            "summary": c.sources_json.get("summary", "")
+                            "summary": c.sources_json.get("summary", ""),
+                            "unique_concepts": c.sources_json.get("unique_concepts", [])
                         })
                 return context
             

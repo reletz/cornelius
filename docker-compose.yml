@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  cornell-notes:
+    build: .
+    image: cornell-notes:latest
+    container_name: cornell-notes
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./cornell_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/cornell.db
+      # Optional: Pre-fill key if running in a trusted private environment
+      # - GEMINI_API_KEY=your_key_here
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

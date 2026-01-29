@@ -46,10 +46,22 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api")
 
 # Serve static frontend files in production
-static_path = Path(__file__).parent.parent.parent / "static"
+import os
+from pathlib import Path
+
+# Serve static frontend files
+static_path = Path("/app/static")
+
+if not static_path.exists():
+    alt_static_path = Path(__file__).parent.parent.parent / "frontend" / "dist"
+    if alt_static_path.exists():
+        static_path = alt_static_path
+
 if static_path.exists():
     app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
-
+    print(f"Serving static files from: {static_path}")
+else:
+    print(f"Static files not found at: {static_path}")
 
 @app.get("/health")
 async def health_check():

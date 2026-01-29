@@ -19,7 +19,7 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: unknown[]) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     const newErrors: string[] = []
     
     const validFiles = acceptedFiles.filter(file => {

@@ -132,7 +132,7 @@ export default function ClusteringPage() {
     setMerging(true)
     
     try {
-      const result = await mergeClusters(selectedClusters, newTitle.trim())
+      await mergeClusters(selectedClusters, newTitle.trim())
       
       // Refresh clusters
       if (sessionId) {
@@ -260,13 +260,6 @@ export default function ClusteringPage() {
                           onClick={() => toggleClusterSelection(cluster.id)}
                         >
                           <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedClusters.includes(cluster.id)}
-                              onChange={() => {}} // Handled by parent onClick
-                              onClick={(e) => e.stopPropagation()} // Prevent double toggle
-                              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
-                            />
                             <h3 className="font-medium text-gray-900">
                               {index + 1}. {cluster.title}
                             </h3>

@@ -1,4 +1,4 @@
-import { useAppStore, PromptOptions } from '../store/appStore'
+import { useAppStore } from '../store/appStore'
 import { cn } from '../lib/utils'
 
 interface RadioOption {

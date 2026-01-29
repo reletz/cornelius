@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react'
+import { Sparkles, CheckCircle, XCircle, Loader2, ArrowRight, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Card, CardHeader, CardBody, CardFooter } from '../components/ui/Card'
 import Button from '../components/ui/Button'
@@ -46,6 +46,7 @@ export default function GenerationPage() {
   const [polling, setPolling] = useState(false)
   const [starting, setStarting] = useState(false)
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0)
+  const [regeneratingClusters, setRegeneratingClusters] = useState<Set<string>>(new Set())
   
   // Prevent double-call in React StrictMode
   const hasStartedRef = useRef(false)
@@ -134,7 +135,77 @@ export default function GenerationPage() {
     }
   }
 
+  // Regenerate a single failed note
+  const regenerateSingleNote = async (clusterId: string) => {
+    if (!sessionId || regeneratingClusters.has(clusterId)) return
+
+    setRegeneratingClusters(prev => new Set(prev).add(clusterId))
+    
+    try {
+      const promptPayload: PromptOptionsPayload = {
+        use_default: promptOptions.useDefault,
+        language: promptOptions.language,
+        depth: promptOptions.depth,
+        custom_prompt: promptOptions.customPrompt || undefined,
+      }
+      
+      const result = await generateNotes(sessionId, [clusterId], promptPayload, rateLimitEnabled)
+      toast.success('Regenerating note...')
+      
+      // Poll for this specific regeneration
+      const pollRegeneration = async () => {
+        try {
+          const regenerateStatus = await getGenerationStatus(result.task_id)
+          
+          if (regenerateStatus.status === 'completed' || regenerateStatus.status === 'failed') {
+            setRegeneratingClusters(prev => {
+              const next = new Set(prev)
+              next.delete(clusterId)
+              return next
+            })
+            
+            // Update status based on regeneration result
+            if (regenerateStatus.completed_clusters?.includes(clusterId)) {
+              setStatus(prev => prev ? {
+                ...prev,
+                completedClusters: [...prev.completedClusters.filter(id => id !== clusterId), clusterId],
+                failedClusters: prev.failedClusters.filter(id => id !== clusterId)
+              } : null)
+              toast.success('Note regenerated successfully!')
+              
+              // Refresh notes
+              const notes = await listNotes(sessionId)
+              setNotes(notes.notes)
+            } else {
+              toast.error('Note regeneration failed')
+            }
+            return true // Stop polling
+          }
+          return false // Continue polling
+        } catch (err) {
+          console.error('Failed to poll regeneration status:', err)
+          return false
+        }
+      }
+      
+      // Start polling
+      const pollInterval = setInterval(async () => {
+        const done = await pollRegeneration()
+        if (done) clearInterval(pollInterval)
+      }, 2000)
+      
+    } catch (err) {
+      toast.error('Failed to start regeneration')
+      setRegeneratingClusters(prev => {
+        const next = new Set(prev)
+        next.delete(clusterId)
+        return next
+      })
+    }
+  }
+
   const getClusterStatus = (clusterId: string) => {
+    if (regeneratingClusters.has(clusterId)) return 'regenerating'
     if (!status) return 'pending'
     if (status.completedClusters.includes(clusterId)) return 'completed'
     if (status.failedClusters.includes(clusterId)) return 'failed'
@@ -149,6 +220,7 @@ export default function GenerationPage() {
       case 'failed':
         return <XCircle className="h-5 w-5 text-red-500" />
       case 'processing':
+      case 'regenerating':
         return <Loader2 className="h-5 w-5 text-primary-500 animate-spin" />
       default:
         return <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
@@ -230,7 +302,7 @@ export default function GenerationPage() {
                     key={cluster.id}
                     className={cn(
                       "flex items-center justify-between p-3 rounded-lg",
-                      clusterStatus === 'processing' && "bg-primary-50 border border-primary-200",
+                      (clusterStatus === 'processing' || clusterStatus === 'regenerating') && "bg-primary-50 border border-primary-200",
                       clusterStatus === 'completed' && "bg-green-50",
                       clusterStatus === 'failed' && "bg-red-50",
                       clusterStatus === 'pending' && "bg-gray-50"
@@ -242,15 +314,28 @@ export default function GenerationPage() {
                         {index + 1}. {cluster.title}
                       </span>
                     </div>
-                    <span className={cn(
-                      "text-xs font-medium px-2 py-1 rounded",
-                      clusterStatus === 'completed' && "bg-green-100 text-green-700",
-                      clusterStatus === 'failed' && "bg-red-100 text-red-700",
-                      clusterStatus === 'processing' && "bg-primary-100 text-primary-700",
-                      clusterStatus === 'pending' && "bg-gray-100 text-gray-600"
-                    )}>
-                      {clusterStatus === 'processing' ? 'Generating...' : clusterStatus}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {clusterStatus === 'failed' && isComplete && (
+                        <button
+                          onClick={() => regenerateSingleNote(cluster.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors"
+                          title="Regenerate this note"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Retry
+                        </button>
+                      )}
+                      <span className={cn(
+                        "text-xs font-medium px-2 py-1 rounded",
+                        clusterStatus === 'completed' && "bg-green-100 text-green-700",
+                        clusterStatus === 'failed' && "bg-red-100 text-red-700",
+                        (clusterStatus === 'processing' || clusterStatus === 'regenerating') && "bg-primary-100 text-primary-700",
+                        clusterStatus === 'pending' && "bg-gray-100 text-gray-600"
+                      )}>
+                        {clusterStatus === 'processing' ? 'Generating...' : 
+                         clusterStatus === 'regenerating' ? 'Regenerating...' : clusterStatus}
+                      </span>
+                    </div>
                   </li>
                 )
               })}

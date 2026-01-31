@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: reletz/Cornelius
+  IMAGE_NAME: reletz/cornelius
 
 jobs:
   build-and-push:
